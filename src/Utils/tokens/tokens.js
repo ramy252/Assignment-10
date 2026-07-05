@@ -6,6 +6,8 @@ import {
   REFRESH_TOKEN_ADMIN_SECRET,
   ACCESS_TOKEN_ADMIN_SECRET,
   REFRESH_TOKEN_USER_EXPIRES_IN,
+  ACCESS_TOKEN_ADMIN_EXPIRES_IN,
+  REFRESH_TOKEN_ADMIN_EXPIRES_IN,
 } from "../../config/process.js";
 import { RoleEnum, SignatureEnum } from "../enum/user.enum.js";
 export const generateToken = ({ payload, secretKey, option }) => {
@@ -14,7 +16,6 @@ export const generateToken = ({ payload, secretKey, option }) => {
 export const verifyToken = ({ token, secretKey }) => {
   return jwt.verify(token, secretKey);
 };
-
 
 export const getSignature = ({ signatureLever = SignatureEnum.USER }) => {
   let signature = { accessSignature: undefined, refreshSignature: undefined };
@@ -36,8 +37,10 @@ export const getSignature = ({ signatureLever = SignatureEnum.USER }) => {
 };
 
 export const getNewLogicCredentials = async (user) => {
-  const signature = getSignature({signatureLever: user.role !== RoleEnum.ADMIN ? SignatureEnum.USER : SignatureEnum.ADMIN});
-
+  const signature = getSignature({
+    signatureLever:
+      user.role !== RoleEnum.ADMIN ? SignatureEnum.USER : SignatureEnum.ADMIN,
+  });
 
   let accessToken = generateToken({
     payload: { id: user._id },
@@ -46,9 +49,13 @@ export const getNewLogicCredentials = async (user) => {
       subject: "user_id",
       issuer: "auth-service",
       audience: "sarahah_app",
-      expiresIn: {expiresIn: user.role !== RoleEnum.ADMIN ? Number(ACCESS_TOKEN_USER_EXPIRES_IN) : Number(ACCESS_TOKEN_ADMIN_EXPIRES_IN)},
+      expiresIn: {
+        expiresIn:
+          user.role !== RoleEnum.ADMIN
+            ? Number(ACCESS_TOKEN_USER_EXPIRES_IN)
+            : Number(ACCESS_TOKEN_ADMIN_EXPIRES_IN),
+      },
     },
-
   });
   let refreshToken = generateToken({
     payload: { id: user._id },
@@ -57,7 +64,12 @@ export const getNewLogicCredentials = async (user) => {
       subject: "user_id",
       issuer: "auth-service",
       audience: "sarahah_app",
-      expiresIn: {expiresIn: user.role !== RoleEnum.ADMIN ? Number(REFRESH_TOKEN_USER_EXPIRES_IN) : Number(REFRESH_TOKEN_ADMIN_EXPIRES_IN)},
+      expiresIn: {
+        expiresIn:
+          user.role !== RoleEnum.ADMIN
+            ? Number(REFRESH_TOKEN_USER_EXPIRES_IN)
+            : Number(REFRESH_TOKEN_ADMIN_EXPIRES_IN),
+      },
     },
   });
 
@@ -66,4 +78,3 @@ export const getNewLogicCredentials = async (user) => {
     refreshToken,
   };
 };
-
