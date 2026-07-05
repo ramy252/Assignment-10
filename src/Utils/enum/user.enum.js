@@ -15,5 +15,8 @@ export const ProviderEnum = {
 export const SignatureEnum = {
     ADMIN: 0,
     USER: 1,
-    SUPER_ADMIN: 2
+};
+export const TokenTypeEnum = {
+    ACCESS: 0,
+    REFRESH: 1,
 };

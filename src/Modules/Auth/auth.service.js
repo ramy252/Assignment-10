@@ -42,7 +42,6 @@ export const signUp = async (req, res) => {
   }
 };
 
-
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -51,11 +50,11 @@ export const login = async (req, res) => {
       filter: { email },
       select: "userName email password firstName lastName phone",
     });
-
+    
     if (!user) {
       throw BadRequestException({ message: "Invalid email or password" });
     }
-    const isMatch = compareHash({
+    const isMatch = await compareHash({
       plainText: password,
       hashedText: user.password,
       algorithm: HASHING_ALGORITHM.BCRYPT,
@@ -63,8 +62,7 @@ export const login = async (req, res) => {
     if (!isMatch) {
       throw BadRequestException({ message: "Invalid email or password" });
     }
-    const { accessToken, refreshToken } = await getNewLogicCredentials({ user });
-    console.log(accessToken, refreshToken);
+    const { accessToken, refreshToken } = await getNewLogicCredentials(user);
     const userData = user.toObject();
     if (userData.phone) {
       userData.phone = decrypt(userData.phone);
@@ -75,7 +73,9 @@ export const login = async (req, res) => {
       data: { accessToken, refreshToken },
     });
   } catch (error) {
-    throw BadRequestException({ message: "Invalid email or password" });
+    return BadRequestException({
+      message: "Invalid email or password",
+      extra: error,
+    });
   }
 };
-
