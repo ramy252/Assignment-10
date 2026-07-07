@@ -6,6 +6,7 @@ export const getProfile = async (req, res) => {
     const user = req.user;
     const userData = user.toObject();
     delete userData.password;
+    console.log(req.user);
     
     userData.phone = decrypt(userData.phone);
     return successResponse({

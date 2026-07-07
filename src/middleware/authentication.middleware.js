@@ -1,59 +1,84 @@
 import { TokenTypeEnum } from "../Utils/enum/user.enum.js";
-import { getSignature, verifyToken } from "../Utils/tokens/tokens.js";
-
-import { SignatureEnum } from "../Utils/enum/user.enum.js";
+import { SignatureEnum, RoleEnum } from "../Utils/enum/user.enum.js";
 import { findById } from "../DB/database.repository.js";
 import { UserModel } from "../DB/model/user.model.js";
 import { BadRequestException } from "../Utils/respons/error.response.js";
-import jwt from "jsonwebtoken";
+import { verifyToken, getSignature } from "../Utils/tokens/tokens.js";
 
 // helper function to decode token
 export const decodeToken = async ({
   authorization,
   TokenType = TokenTypeEnum.ACCESS,
 }) => {
-  const [Bearer, token] = authorization.split(" ");
-  const signature = getSignature({
-    signatureLever:
-      Bearer === "ADMIN"
-        ? SignatureEnum.ADMIN
-        : Bearer === "USER"
-          ? SignatureEnum.USER
-          : new Error("Invalid token"),
-  });
-  const decode = verifyToken({
-    token,
-    secretKey:
-      TokenType === TokenTypeEnum.ACCESS
-        ? signature.accessSignature
-        : signature.refreshSignature,
-  });
-  const user = await findById({
-    model: UserModel,
-    id: decode.id,
-  });
-  if (!user) {
-    throw BadRequestException({ message: "User not found" });
+  if (!authorization) {
+    throw new Error("Authorization header is missing");
   }
+  let [Bearer, token] = authorization.split(" ");
+  if (!token) {
+    throw new Error("Invalid token format");
+  }
+
+  // Validate prefix
+  if (Bearer !== "ADMIN" && Bearer !== "USER") {
+    throw new Error("Invalid token prefix. Must be 'ADMIN' or 'USER'");
+  }
+
+  // Try both signatures to decode the token
+  let decode;
+  let signature;
+  let signatureLevel;
+
+  try {
+    signature = getSignature({ signaturelevel: SignatureEnum.USER });
+    decode = verifyToken({
+      token,
+      secretKey:
+        TokenType === TokenTypeEnum.ACCESS
+          ? signature.accessSignature
+          : signature.refreshSignature,
+    });
+    signatureLevel = SignatureEnum.USER;
+  } catch (userError) {
+    try {
+      signature = getSignature({ signaturelevel: SignatureEnum.ADMIN });
+      decode = verifyToken({
+        token,
+        secretKey:
+          TokenType === TokenTypeEnum.ACCESS
+            ? signature.accessSignature
+            : signature.refreshSignature,
+      });
+      signatureLevel = SignatureEnum.ADMIN;
+    } catch (adminError) {
+      throw new Error("Invalid token");
+    }
+  }
+
+  let user = await findById({ model: UserModel, id: decode.id });
+  if (!user) {
+    throw new BadRequestException("User not found");
+  }
+
+  if (Bearer === "ADMIN" && user.role !== RoleEnum.ADMIN) {
+    throw new Error("User is not an admin");
+  }
+  if (Bearer === "USER" && user.role === RoleEnum.ADMIN) {
+    throw new Error("Admin users must use ADMIN prefix");
+  }
+
   return { user, decode };
 };
 
-// middleware for authentication 
-export const authentication = (tokenType = TokenTypeEnum.ACCESS) => {
+export const authentication = ({ TokenType = TokenTypeEnum.ACCESS }) => {
   return async (req, res, next) => {
-    if (!req.headers.authorization) {
-      throw BadRequestException({ message: "Token is required" });
-    }
-    try {
-      const { user, decode } = await decodeToken({
-        authorization: req.headers.authorization,
-        TokenType: tokenType,
-      });
-      req.user = user;
-      req.decode = decode;
-      return next();
-    } catch (error) {
-      return next(error);
-    }
+    let { user, decode } = await decodeToken({
+      authorization: req.headers.authorization,
+      TokenType,
+    });
+
+    req.user = user;
+    req.decode = decode;
+
+    next();
   };
 };

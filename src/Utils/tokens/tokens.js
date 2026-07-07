@@ -10,67 +10,67 @@ import {
   REFRESH_TOKEN_ADMIN_EXPIRES_IN,
 } from "../../config/process.js";
 import { RoleEnum, SignatureEnum } from "../enum/user.enum.js";
-export const generateToken = ({ payload, secretKey, option }) => {
-  return jwt.sign(payload, secretKey, option);
+
+export const generateToken = ({ payload, secret, option = {} }) => {
+  return jwt.sign(payload, secret, option);
 };
 export const verifyToken = ({ token, secretKey }) => {
   return jwt.verify(token, secretKey);
 };
 
-export const getSignature = ({ signatureLever = SignatureEnum.USER }) => {
-  let signature = { accessSignature: undefined, refreshSignature: undefined };
-  switch (signatureLever) {
-    case SignatureEnum.ADMIN:
-      signature.accessSignature = ACCESS_TOKEN_ADMIN_SECRET;
-      signature.refreshSignature = REFRESH_TOKEN_ADMIN_SECRET;
-      break;
+export const getSignature = ({ signaturelevel = SignatureEnum.USER }) => {
+  let signature = {
+    accessSignature: undefined,
+    refreshSignature: undefined,
+    accessTokenExpires: 0,
+    refreshTokenExpires: 0,
+  };
+  switch (signaturelevel) {
     case SignatureEnum.USER:
-      signature.accessSignature = ACCESS_TOKEN_USER_SECRET;
-      signature.refreshSignature = REFRESH_TOKEN_USER_SECRET;
+      {
+        signature.accessSignature = ACCESS_TOKEN_USER_SECRET;
+        signature.refreshSignature = REFRESH_TOKEN_USER_SECRET;
+        signature.accessTokenExpires = Number(ACCESS_TOKEN_USER_EXPIRES_IN);
+        signature.refreshTokenExpires = Number(REFRESH_TOKEN_USER_EXPIRES_IN);
+      }
+      break;
+    case SignatureEnum.ADMIN:
+      {
+        signature.accessSignature = ACCESS_TOKEN_ADMIN_SECRET;
+        signature.refreshSignature = REFRESH_TOKEN_ADMIN_SECRET;
+        signature.accessTokenExpires = Number(ACCESS_TOKEN_ADMIN_EXPIRES_IN);
+        signature.refreshTokenExpires = Number(REFRESH_TOKEN_ADMIN_EXPIRES_IN);
+      }
       break;
     default:
-      signature.accessSignature = ACCESS_TOKEN_USER_SECRET;
-      signature.refreshSignature = REFRESH_TOKEN_USER_SECRET;
+      {
+        signature.accessSignature = ACCESS_TOKEN_USER_SECRET;
+        signature.refreshSignature = REFRESH_TOKEN_USER_SECRET;
+        signature.accessTokenExpires = Number(ACCESS_TOKEN_USER_EXPIRES_IN);
+        signature.refreshTokenExpires = Number(REFRESH_TOKEN_USER_EXPIRES_IN);
+      }
       break;
   }
   return signature;
 };
 
-export const getNewLogicCredentials = async (user) => {
-  const signature = getSignature({
-    signatureLever:
-      user.role !== RoleEnum.ADMIN ? SignatureEnum.USER : SignatureEnum.ADMIN,
+export const getNewLogicCredentials = ({ user }) => {
+  const signatureLevel = getSignature({
+    signaturelevel:
+      user.role != RoleEnum.USER ? SignatureEnum.ADMIN : SignatureEnum.USER,
+  });
+console.log("from token"+user);
+
+  const accessToken = generateToken({
+    payload: { id: user._id },
+    secret: signatureLevel.accessSignature,
+    option: { expiresIn: Number(signatureLevel.accessTokenExpires) },
+  });
+  const refreshToken = generateToken({
+    payload: { id: user._id },
+    secret: signatureLevel.refreshSignature,
+    option: { expiresIn: Number(signatureLevel.refreshTokenExpires) },
   });
 
-  let accessToken = generateToken({
-    payload: { id: user._id },
-    secretKey: signature.accessSignature,
-    option: {
-      subject: "user_id",
-      issuer: "auth-service",
-      audience: "sarahah_app",  
-      expiresIn: 
-        user.role !== RoleEnum.ADMIN
-          ? Number(ACCESS_TOKEN_USER_EXPIRES_IN)
-          : Number(ACCESS_TOKEN_ADMIN_EXPIRES_IN),
-    },
-  });
-  let refreshToken = generateToken({
-    payload: { id: user._id },
-    secretKey: signature.refreshSignature,
-    option: {
-      subject: "user_id",
-      issuer: "auth-service",
-      audience: "sarahah_app",
-      expiresIn: 
-        user.role !== RoleEnum.ADMIN
-          ? Number(REFRESH_TOKEN_USER_EXPIRES_IN)
-          : Number(REFRESH_TOKEN_ADMIN_EXPIRES_IN),
-    },
-  });
-
-  return {
-    accessToken,
-    refreshToken,
-  };
+  return { accessToken, refreshToken };
 };

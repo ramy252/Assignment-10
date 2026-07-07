@@ -54,10 +54,7 @@ export const create = async ({
   data,
   options = { validateBeforeSave: true },
 } = {}) => {
-  const doc = model.create(data);
-  if (options.lean) doc.lean();
-  if (options.populate) doc.populate(options.populate);
-  return await doc.exec();
+  return await model.create(data, options);
 };
 export const insertMany = async ({ model, data } = {}) => {
   return await model.insertMany(data);

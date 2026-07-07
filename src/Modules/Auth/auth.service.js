@@ -14,20 +14,22 @@ import { HASHING_ALGORITHM } from "../../Utils/enum/security.enum.js";
 import { getNewLogicCredentials } from "../../Utils/tokens/tokens.js";
 export const signUp = async (req, res) => {
   try {
-    const { userName, email, password, phone } = req.body;
+    const { firstName, lastName, userName, email, password, phone } = req.body;
 
     if (await findOne({ model: UserModel, filter: { email } })) {
       throw ConflictException({ message: "User already exists" });
     }
 
     const user = await UserModel.create({
-      userName,
+      firstName,
+      lastName,
+      ...(userName && !firstName && !lastName ? { userName } : {}),
       email,
       password: await generateHash({
         plainText: password,
         algorithm: HASHING_ALGORITHM.BCRYPT,
       }),
-      phone: encrypt(phone),
+      phone: phone ? encrypt(phone) : undefined,
     });
     return successResponse({
       res,
@@ -36,7 +38,7 @@ export const signUp = async (req, res) => {
     });
   } catch (error) {
     return BadRequestException({
-      message: "Failed to create user",
+      message: error.message || "Failed to create user",
       extra: error,
     });
   }
@@ -50,6 +52,8 @@ export const login = async (req, res) => {
       filter: { email },
       select: "userName email password firstName lastName phone",
     });
+    console.log(user);
+    
     
     if (!user) {
       throw BadRequestException({ message: "Invalid email or password" });
@@ -62,11 +66,12 @@ export const login = async (req, res) => {
     if (!isMatch) {
       throw BadRequestException({ message: "Invalid email or password" });
     }
-    const { accessToken, refreshToken } = await getNewLogicCredentials(user);
-    const userData = user.toObject();
-    if (userData.phone) {
-      userData.phone = decrypt(userData.phone);
-    }
+    const { accessToken, refreshToken } = await getNewLogicCredentials({
+      user: user,
+    });
+
+
+
     return successResponse({
       res,
       message: "User logged in successfully",
@@ -74,8 +79,9 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     return BadRequestException({
-      message: "Invalid email or password",
+      message: "Invalid email or password3333",
       extra: error,
     });
   }
 };
+
