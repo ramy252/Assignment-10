@@ -32,6 +32,7 @@ const userSchema = new mongoose.Schema(
       },
       minLength: 6,
     },
+    
     DOB: Date,
     phone: String,
     role: {
@@ -49,6 +50,7 @@ const userSchema = new mongoose.Schema(
       enum: Object.values(ProviderEnum),
       default: ProviderEnum.SYSTEM,
     },
+    profileImage: String,
   },
   {
     timestamps: true,

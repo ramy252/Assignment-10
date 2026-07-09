@@ -59,8 +59,7 @@ export const getNewLogicCredentials = ({ user }) => {
     signaturelevel:
       user.role != RoleEnum.USER ? SignatureEnum.ADMIN : SignatureEnum.USER,
   });
-console.log("from token"+user);
-
+  
   const accessToken = generateToken({
     payload: { id: user._id },
     secret: signatureLevel.accessSignature,

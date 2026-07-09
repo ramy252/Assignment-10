@@ -56,9 +56,18 @@ export const create = async ({
 } = {}) => {
   return await model.create(data, options);
 };
+export const createOne = async ({
+  model,
+  data,
+  options = { validateBeforeSave: true },
+} = {}) => {
+  const result = await model.create([data], options); // ✅ الـ data لازم تتلف في array
+  return result[0];
+};
 export const insertMany = async ({ model, data } = {}) => {
   return await model.insertMany(data);
 };
+console
 export const updateOne = async ({
   model,
   filter = {},

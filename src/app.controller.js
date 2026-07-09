@@ -2,9 +2,10 @@ import { connectDB } from "./DB/connection.js";
 import { authController, messageController, userController } from "./Modules/index.js";
 import { globalError, NotFoundException } from "./Utils/respons/error.response.js";
 import { successResponse } from "./Utils/respons/success.response.js";
+import cors from "cors";
 
 export const bootStrap = (app,express) => {
-   app.use(express.json());
+   app.use(express.json(),cors());
    connectDB()
    app.use("/api/v1/auth", authController);
    app.use("/api/v1/message", messageController);

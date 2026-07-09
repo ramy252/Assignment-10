@@ -2,7 +2,10 @@ import { TokenTypeEnum } from "../Utils/enum/user.enum.js";
 import { SignatureEnum, RoleEnum } from "../Utils/enum/user.enum.js";
 import { findById } from "../DB/database.repository.js";
 import { UserModel } from "../DB/model/user.model.js";
-import { BadRequestException } from "../Utils/respons/error.response.js";
+import {
+  BadRequestException,
+  ForbiddenException,
+} from "../Utils/respons/error.response.js";
 import { verifyToken, getSignature } from "../Utils/tokens/tokens.js";
 
 // helper function to decode token
@@ -79,6 +82,16 @@ export const authentication = ({ TokenType = TokenTypeEnum.ACCESS }) => {
     req.user = user;
     req.decode = decode;
 
+    next();
+  };
+};
+export const authorization = ({ RoleEnum = [] }) => {
+  return async (req, res, next) => {
+    if (!RoleEnum.includes(req.user.role)) {
+      throw ForbiddenException({
+        message: "User is not authorized",
+      });
+    }
     next();
   };
 };
